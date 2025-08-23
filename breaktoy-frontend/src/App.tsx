@@ -35,6 +35,10 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+  const [errorProducts, setErrorProducts] = useState<string | null>(null);
+  const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
 
   const buildFilters = () => ({
     name: name || undefined,
@@ -49,14 +53,32 @@ const App: React.FC = () => {
 
   const loadProducts = async () => {
     const filters = buildFilters();
-    console.log('Enviando filtros:', filters);
-    const res = await fetchProducts({ ...filters, page, size: pageSize });
-    setProducts(res.data);
+    setIsLoadingProducts(true);
+    setErrorProducts(null);
+    try {
+      console.log('Enviando filtros:', filters);
+      const res = await fetchProducts({ ...filters, page, size: pageSize });
+      setProducts(res.data);
+    } catch (err) {
+      console.error(err);
+      setErrorProducts('Failed to load products');
+    } finally {
+      setIsLoadingProducts(false);
+    }
   };
 
   const loadMetrics = async () => {
-    const res = await fetchMetrics();
-    setMetrics(res.data);
+    setIsLoadingMetrics(true);
+    setErrorMetrics(null);
+    try {
+      const res = await fetchMetrics();
+      setMetrics(res.data);
+    } catch (err) {
+      console.error(err);
+      setErrorMetrics('Failed to load metrics');
+    } finally {
+      setIsLoadingMetrics(false);
+    }
   };
 
   useEffect(() => {
@@ -99,24 +121,32 @@ const App: React.FC = () => {
           + New Product
         </button>
 
-        <ProductsList
-          products={products}
-          onEdit={p => { setEditing(p); setShowForm(true); }}
-          onDelete={async id => {
-            await deleteProduct(id);
-            await loadProducts();
-            await loadMetrics();
-          }}
-          onToggleStock={async (id, currentlyInStock, newQty) => {
-            if (currentlyInStock) {
-              await markOutOfStock(id);
-            } else {
-              await markInStock(id, newQty ?? 0);
-            }
-            await loadProducts();
-            await loadMetrics();
-          }}
-        />
+        {isLoadingProducts ? (
+          <div className="flex justify-center my-4">
+            <div className="h-8 w-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : errorProducts ? (
+          <div className="text-red-500 text-center my-4">{errorProducts}</div>
+        ) : (
+          <ProductsList
+            products={products}
+            onEdit={p => { setEditing(p); setShowForm(true); }}
+            onDelete={async id => {
+              await deleteProduct(id);
+              await loadProducts();
+              await loadMetrics();
+            }}
+            onToggleStock={async (id, currentlyInStock, newQty) => {
+              if (currentlyInStock) {
+                await markOutOfStock(id);
+              } else {
+                await markInStock(id, newQty ?? 0);
+              }
+              await loadProducts();
+              await loadMetrics();
+            }}
+          />
+        )}
 
         <div className="flex justify-center items-center space-x-4 my-6">
           <button
@@ -136,15 +166,23 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {metrics && (
-          <div id="metrics" className="scroll-mt-20">
-              <h2 className="text-3xl font-semibold mb-8 mt-15 text-center text-gray-100">
-      Metrics Inventory
-      </h2>
-            <MetricsTable metrics={metrics} />
-            <MetricsGraphics metrics={metrics} />
-          </div>
-        )}
+        <div id="metrics" className="scroll-mt-20">
+          <h2 className="text-3xl font-semibold mb-8 mt-15 text-center text-gray-100">
+            Metrics Inventory
+          </h2>
+          {isLoadingMetrics ? (
+            <div className="flex justify-center my-4">
+              <div className="h-8 w-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : errorMetrics ? (
+            <div className="text-red-500 text-center my-4">{errorMetrics}</div>
+          ) : metrics ? (
+            <>
+              <MetricsTable metrics={metrics} />
+              <MetricsGraphics metrics={metrics} />
+            </>
+          ) : null}
+        </div>
 
         {showForm && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-start p-4 overflow-auto">
