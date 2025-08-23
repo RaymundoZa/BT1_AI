@@ -30,7 +30,11 @@ const App: React.FC = () => {
   const [availability, setAvailability] = useState<'all' | 'inStock' | 'outOfStock'>('all');
 
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState<boolean>(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<MetricsType | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState<boolean>(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [page, setPage] = useState<number>(0);
   const [categories, setCategories] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -49,14 +53,34 @@ const App: React.FC = () => {
 
   const loadProducts = async () => {
     const filters = buildFilters();
-    console.log('Enviando filtros:', filters);
-    const res = await fetchProducts({ ...filters, page, size: pageSize });
-    setProducts(res.data);
+    setProductsLoading(true);
+    setProductsError(null);
+    try {
+      console.log('Enviando filtros:', filters);
+      const res = await fetchProducts({ ...filters, page, size: pageSize });
+      setProducts(res.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setProductsError(message);
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+    }
   };
 
   const loadMetrics = async () => {
-    const res = await fetchMetrics();
-    setMetrics(res.data);
+    setMetricsLoading(true);
+    setMetricsError(null);
+    try {
+      const res = await fetchMetrics();
+      setMetrics(res.data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setMetricsError(message);
+      setMetrics(null);
+    } finally {
+      setMetricsLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -101,6 +125,8 @@ const App: React.FC = () => {
 
         <ProductsList
           products={products}
+          loading={productsLoading}
+          error={productsError}
           onEdit={p => { setEditing(p); setShowForm(true); }}
           onDelete={async id => {
             await deleteProduct(id);
@@ -136,15 +162,21 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {metrics && (
-          <div id="metrics" className="scroll-mt-20">
+        <div id="metrics" className="scroll-mt-20">
+          {metricsLoading && <p className="text-center">Loading metrics...</p>}
+          {metricsError && (
+            <p className="text-center text-red-500">Error: {metricsError}</p>
+          )}
+          {!metricsLoading && !metricsError && metrics && (
+            <>
               <h2 className="text-3xl font-semibold mb-8 mt-15 text-center text-gray-100">
-      Metrics Inventory
-      </h2>
-            <MetricsTable metrics={metrics} />
-            <MetricsGraphics metrics={metrics} />
-          </div>
-        )}
+                Metrics Inventory
+              </h2>
+              <MetricsTable metrics={metrics} />
+              <MetricsGraphics metrics={metrics} />
+            </>
+          )}
+        </div>
 
         {showForm && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-start p-4 overflow-auto">
