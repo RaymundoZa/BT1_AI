@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.time.LocalDate;
 
+
 import java.util.HashMap;
 
 
@@ -26,6 +27,13 @@ public class ProductController {
 
 
     private List<Product> productList = new ArrayList<>();
+
+    private final InventoryMetricsService inventoryMetricsService;
+
+    public ProductController(InventoryMetricsService inventoryMetricsService) {
+        this.inventoryMetricsService = inventoryMetricsService;
+    }
+
     private final AtomicLong idGenerator = new AtomicLong();
 
     private final ProductService productService;
@@ -148,6 +156,9 @@ public class ProductController {
 
     @GetMapping("/metrics")
     public Map<String, Object> getInventoryMetrics() {
+
+        Map<String, Object> metrics = inventoryMetricsService.computeGlobalMetrics(productList);
+        metrics.put("byCategory", inventoryMetricsService.computeByCategory(productList));
 
         return productService.getInventoryMetrics();
 
