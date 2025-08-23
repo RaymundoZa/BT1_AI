@@ -8,12 +8,25 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.Map;
+
+import java.util.concurrent.atomic.AtomicLong;
+
+import java.util.Comparator;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+import java.time.LocalDate;
+
 import java.util.HashMap;
+
 
 @RestController
 @RequestMapping("/products")
 @CrossOrigin(origins = "http://localhost:8080")
 public class ProductController {
+
+
+    private List<Product> productList = new ArrayList<>();
+    private final AtomicLong idGenerator = new AtomicLong();
 
     private final ProductService productService;
 
@@ -21,8 +34,11 @@ public class ProductController {
         this.productService = productService;
     }
 
+
     @PostMapping
     public Product createProduct(@Valid @RequestBody Product product) {
+
+        long newId = idGenerator.incrementAndGet();
 
         return productService.createProduct(product);
     }
@@ -34,6 +50,7 @@ public class ProductController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
 
         long newId = productService.getProductList().size() + 1;
+
         product.setId(newId);
         product.setCreatedAt(java.time.LocalDate.now());
         product.setUpdatedAt(java.time.LocalDate.now());
