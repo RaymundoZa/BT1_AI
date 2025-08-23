@@ -3,18 +3,21 @@ import axios from 'axios';
 import qs from 'qs';
 
 const API = axios.create({
-  baseURL: 'http://localhost:9090',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   paramsSerializer: params =>
     qs.stringify(params, { arrayFormat: 'repeat' }),
 });
 
-export interface Product {
-  id?: number;
+export interface NewProduct {
   name: string;
   category: string;
   unitPrice: number;
   quantityInStock: number;
   expirationDate?: string;
+}
+
+export interface Product extends NewProduct {
+  id: number;
 }
 
 export interface Metrics {
@@ -32,10 +35,10 @@ export const fetchProducts = (params: Record<string, unknown>) =>
   API.get<Product[]>('/products', { params });
 
 // CRUD básico
-export const createProduct = (p: Product) =>
+export const createProduct = (p: NewProduct) =>
   API.post<Product>('/products', p);
-export const updateProduct = (id: number, p: Product) =>
-  API.put<Product>(`/products/${id}`, p);
+export const updateProduct = (p: Product) =>
+  API.put<Product>(`/products/${p.id}`, p);
 export const deleteProduct = (id: number) =>
   API.delete(`/products/${id}`);
 
