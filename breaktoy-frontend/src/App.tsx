@@ -14,6 +14,7 @@ import type { Product, Metrics as MetricsType, NewProduct } from './api/products
 
 import type { Product } from './api/products';
 
+
 import {
   createProduct,
   updateProduct,
@@ -48,7 +49,7 @@ const App: React.FC = () => {
   const [metrics, setMetrics] = useState<MetricsType | null>(null);
   const [metricsLoading, setMetricsLoading] = useState<boolean>(false);
   const [metricsError, setMetricsError] = useState<string | null>(null);
- main
+ 
   const [page, setPage] = useState<number>(0);
   const [categories, setCategories] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -329,7 +330,11 @@ const App: React.FC = () => {
                 initial={editing ?? undefined}
                 categories={categories}
                 onSubmit={async (prod: Product | NewProduct) => {
+
+                  if ('id' in prod) await updateProduct(prod.id, prod);
+
                   if ('id' in prod) await updateProduct(prod);
+
                   else await createProduct(prod);
                   setShowForm(false);
                   refetchProducts();
