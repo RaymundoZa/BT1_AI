@@ -1,6 +1,7 @@
 package com.example.inventory_backend;
 
 import org.springframework.stereotype.Service;
+
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -169,6 +170,26 @@ public class ProductService {
             comparator = comparator.reversed();
         }
         return comparator;
+
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class ProductService {
+
+    private final List<Product> productList = new ArrayList<>();
+
+    public List<Product> getProductList() {
+        return productList;
+    }
+
+    public Optional<Product> findById(Long id) {
+        return productList.stream()
+                .filter(p -> p.getId().equals(id))
+                .findFirst();
+
     }
 }
 
