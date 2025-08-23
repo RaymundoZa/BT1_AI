@@ -1,5 +1,8 @@
 // src/App.tsx
+
+import React, { useEffect, useState, useCallback } from 'react';
 import React, { useEffect, useState, useMemo } from 'react';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductsList from './components/ProductsList';
@@ -10,7 +13,7 @@ import MetricsGraphics from './components/MetricsGraphics';
 import type { Product, Metrics as MetricsType, NewProduct } from './api/products';
 
 import type { Product } from './api/products';
- main
+
 import {
   createProduct,
   updateProduct,
@@ -18,8 +21,12 @@ import {
   markInStock,
   markOutOfStock,
 } from './api/products';
+
+import useDebounce from './hooks/useDebounce';
+
 import useProducts from './hooks/useProducts';
 import useMetrics from './hooks/useMetrics';
+
 
 const pageSize = 10;
 
@@ -30,6 +37,8 @@ const App: React.FC = () => {
 
   const [name, setName] = useState<string>('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const debouncedName = useDebounce(name, 500);
+  const debouncedCategories = useDebounce(selectedCategories, 500);
   const [availability, setAvailability] = useState<'all' | 'inStock' | 'outOfStock'>('all');
 
 
@@ -44,6 +53,33 @@ const App: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
+
+
+  const buildFilters = useCallback(
+    () => ({
+      name: debouncedName || undefined,
+      category: debouncedCategories.length ? debouncedCategories : undefined,
+      inStock:
+        availability === 'inStock'
+          ? true
+          : availability === 'outOfStock'
+          ? false
+          : undefined,
+    }),
+    [debouncedName, debouncedCategories, availability]
+  );
+
+  const loadProducts = useCallback(async () => {
+    const filters = buildFilters();
+    console.log('Enviando filtros:', filters);
+    const res = await fetchProducts({ ...filters, page, size: pageSize });
+    setProducts(res.data);
+  }, [buildFilters, page]);
+
+  const loadMetrics = useCallback(async () => {
+    const res = await fetchMetrics();
+    setMetrics(res.data);
+  }, []);
 
 
   const buildFilters = () => ({
@@ -89,6 +125,7 @@ const App: React.FC = () => {
     }
   };
 
+
   const filters = useMemo(
     () => ({
       name: name || undefined,
@@ -106,11 +143,18 @@ const App: React.FC = () => {
   const { data: products, refetch: refetchProducts } = useProducts({ page, size: pageSize, filters });
 
   const { data: metrics, refetch: refetchMetrics } = useMetrics();
- main
+
 
   useEffect(() => {
     setCategories(Array.from(new Set(products.map(p => p.category))));
   }, [products]);
+
+
+  useEffect(() => {
+    loadProducts();
+    loadMetrics();
+  }, [loadProducts, loadMetrics]);
+
 
   return (
     <div id="top" className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
@@ -125,14 +169,20 @@ const App: React.FC = () => {
           onCategoriesChange={setSelectedCategories}
           availability={availability}
           onAvailabilityChange={setAvailability}
+
+          onSearch={() => { setPage(0); }}
+
           onSearch={() => { setPage(0); refetchProducts(); refetchMetrics(); }}
+
           onClear={() => {
             setName('');
             setSelectedCategories([]);
             setAvailability('all');
             setPage(0);
+
             refetchProducts();
             refetchMetrics();
+
           }}
         />
 
