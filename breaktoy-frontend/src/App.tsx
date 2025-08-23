@@ -1,5 +1,8 @@
 // src/App.tsx
-import React, { useEffect, useState } from 'react';
+
+import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
+
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductsList from './components/ProductsList';
@@ -8,15 +11,23 @@ import SearchBar from './components/SearchBar';
 import MetricsTable from './components/MetricsTable';
 import MetricsGraphics from './components/MetricsGraphics';
 import type { Product, Metrics as MetricsType, NewProduct } from './api/products';
+
+import type { Product } from './api/products';
+
+
 import {
-  fetchProducts,
-  fetchMetrics,
   createProduct,
   updateProduct,
   deleteProduct,
   markInStock,
   markOutOfStock,
 } from './api/products';
+
+import useDebounce from './hooks/useDebounce';
+
+import useProducts from './hooks/useProducts';
+import useMetrics from './hooks/useMetrics';
+
 
 const pageSize = 10;
 
@@ -27,14 +38,54 @@ const App: React.FC = () => {
 
   const [name, setName] = useState<string>('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const debouncedName = useDebounce(name, 500);
+  const debouncedCategories = useDebounce(selectedCategories, 500);
   const [availability, setAvailability] = useState<'all' | 'inStock' | 'outOfStock'>('all');
 
+
   const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState<boolean>(false);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<MetricsType | null>(null);
+  const [metricsLoading, setMetricsLoading] = useState<boolean>(false);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
+ 
   const [page, setPage] = useState<number>(0);
   const [categories, setCategories] = useState<string[]>([]);
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
+  const [isLoadingProducts, setIsLoadingProducts] = useState<boolean>(false);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState<boolean>(false);
+  const [errorProducts, setErrorProducts] = useState<string | null>(null);
+  const [errorMetrics, setErrorMetrics] = useState<string | null>(null);
+
+
+  const buildFilters = useCallback(
+    () => ({
+      name: debouncedName || undefined,
+      category: debouncedCategories.length ? debouncedCategories : undefined,
+      inStock:
+        availability === 'inStock'
+          ? true
+          : availability === 'outOfStock'
+          ? false
+          : undefined,
+    }),
+    [debouncedName, debouncedCategories, availability]
+  );
+
+  const loadProducts = useCallback(async () => {
+    const filters = buildFilters();
+    console.log('Enviando filtros:', filters);
+    const res = await fetchProducts({ ...filters, page, size: pageSize });
+    setProducts(res.data);
+  }, [buildFilters, page]);
+
+  const loadMetrics = useCallback(async () => {
+    const res = await fetchMetrics();
+    setMetrics(res.data);
+  }, []);
+
 
   const buildFilters = () => ({
     name: name || undefined,
@@ -49,24 +100,90 @@ const App: React.FC = () => {
 
   const loadProducts = async () => {
     const filters = buildFilters();
-    console.log('Enviando filtros:', filters);
-    const res = await fetchProducts({ ...filters, page, size: pageSize });
-    setProducts(res.data);
+
+    setIsLoadingProducts(true);
+    setErrorProducts(null);
+
+    setProductsLoading(true);
+    setProductsError(null);
+
+    try {
+      console.log('Enviando filtros:', filters);
+      const res = await fetchProducts({ ...filters, page, size: pageSize });
+      setProducts(res.data);
+    } catch (err) {
+
+      console.error(err);
+      setErrorProducts('Failed to load products');
+    } finally {
+      setIsLoadingProducts(false);
+
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setProductsError(message);
+      setProducts([]);
+    } finally {
+      setProductsLoading(false);
+
+    }
   };
 
   const loadMetrics = async () => {
-    const res = await fetchMetrics();
-    setMetrics(res.data);
+
+    setIsLoadingMetrics(true);
+    setErrorMetrics(null);
+
+    setMetricsLoading(true);
+    setMetricsError(null);
+
+    try {
+      const res = await fetchMetrics();
+      setMetrics(res.data);
+    } catch (err) {
+
+      console.error(err);
+      setErrorMetrics('Failed to load metrics');
+    } finally {
+      setIsLoadingMetrics(false);
+
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      setMetricsError(message);
+      setMetrics(null);
+    } finally {
+      setMetricsLoading(false);
+
+    }
   };
+
+
+  const filters = useMemo(
+    () => ({
+      name: name || undefined,
+      category: selectedCategories.length ? selectedCategories : undefined,
+      inStock:
+        availability === 'inStock'
+          ? true
+          : availability === 'outOfStock'
+          ? false
+          : undefined,
+    }),
+    [name, selectedCategories, availability]
+  );
+
+  const { data: products, refetch: refetchProducts } = useProducts({ page, size: pageSize, filters });
+
+  const { data: metrics, refetch: refetchMetrics } = useMetrics();
+
 
   useEffect(() => {
     setCategories(Array.from(new Set(products.map(p => p.category))));
   }, [products]);
 
+
   useEffect(() => {
     loadProducts();
     loadMetrics();
-  }, [name, selectedCategories, availability, page]);
+  }, [loadProducts, loadMetrics]);
+
 
   return (
     <div id="top" className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
@@ -81,14 +198,20 @@ const App: React.FC = () => {
           onCategoriesChange={setSelectedCategories}
           availability={availability}
           onAvailabilityChange={setAvailability}
-          onSearch={() => { setPage(0); loadProducts(); loadMetrics(); }}
+
+          onSearch={() => { setPage(0); }}
+
+          onSearch={() => { setPage(0); refetchProducts(); refetchMetrics(); }}
+
           onClear={() => {
             setName('');
             setSelectedCategories([]);
             setAvailability('all');
             setPage(0);
-            loadProducts();
-            loadMetrics();
+
+            refetchProducts();
+            refetchMetrics();
+
           }}
         />
 
@@ -99,13 +222,43 @@ const App: React.FC = () => {
           + New Product
         </button>
 
+
+        {isLoadingProducts ? (
+          <div className="flex justify-center my-4">
+            <div className="h-8 w-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : errorProducts ? (
+          <div className="text-red-500 text-center my-4">{errorProducts}</div>
+        ) : (
+          <ProductsList
+            products={products}
+            onEdit={p => { setEditing(p); setShowForm(true); }}
+            onDelete={async id => {
+              await deleteProduct(id);
+              await loadProducts();
+              await loadMetrics();
+            }}
+            onToggleStock={async (id, currentlyInStock, newQty) => {
+              if (currentlyInStock) {
+                await markOutOfStock(id);
+              } else {
+                await markInStock(id, newQty ?? 0);
+              }
+              await loadProducts();
+              await loadMetrics();
+            }}
+          />
+        )}
+
         <ProductsList
           products={products}
+          loading={productsLoading}
+          error={productsError}
           onEdit={p => { setEditing(p); setShowForm(true); }}
           onDelete={async id => {
             await deleteProduct(id);
-            await loadProducts();
-            await loadMetrics();
+            await refetchProducts();
+            await refetchMetrics();
           }}
           onToggleStock={async (id, currentlyInStock, newQty) => {
             if (currentlyInStock) {
@@ -113,10 +266,10 @@ const App: React.FC = () => {
             } else {
               await markInStock(id, newQty ?? 0);
             }
-            await loadProducts();
-            await loadMetrics();
+            await refetchProducts();
+            await refetchMetrics();
           }}
-        />
+
 
         <div className="flex justify-center items-center space-x-4 my-6">
           <button
@@ -136,15 +289,39 @@ const App: React.FC = () => {
           </button>
         </div>
 
-        {metrics && (
-          <div id="metrics" className="scroll-mt-20">
+        <div id="metrics" className="scroll-mt-20">
+
+          <h2 className="text-3xl font-semibold mb-8 mt-15 text-center text-gray-100">
+            Metrics Inventory
+          </h2>
+          {isLoadingMetrics ? (
+            <div className="flex justify-center my-4">
+              <div className="h-8 w-8 border-4 border-gray-300 border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          ) : errorMetrics ? (
+            <div className="text-red-500 text-center my-4">{errorMetrics}</div>
+          ) : metrics ? (
+            <>
+              <MetricsTable metrics={metrics} />
+              <MetricsGraphics metrics={metrics} />
+            </>
+          ) : null}
+
+          {metricsLoading && <p className="text-center">Loading metrics...</p>}
+          {metricsError && (
+            <p className="text-center text-red-500">Error: {metricsError}</p>
+          )}
+          {!metricsLoading && !metricsError && metrics && (
+            <>
               <h2 className="text-3xl font-semibold mb-8 mt-15 text-center text-gray-100">
-      Metrics Inventory
-      </h2>
-            <MetricsTable metrics={metrics} />
-            <MetricsGraphics metrics={metrics} />
-          </div>
-        )}
+                Metrics Inventory
+              </h2>
+              <MetricsTable metrics={metrics} />
+              <MetricsGraphics metrics={metrics} />
+            </>
+          )}
+
+        </div>
 
         {showForm && (
           <div className="fixed inset-0 z-50 bg-black bg-opacity-50 flex justify-center items-start p-4 overflow-auto">
@@ -153,11 +330,15 @@ const App: React.FC = () => {
                 initial={editing ?? undefined}
                 categories={categories}
                 onSubmit={async (prod: Product | NewProduct) => {
+
                   if ('id' in prod) await updateProduct(prod.id, prod);
+
+                  if ('id' in prod) await updateProduct(prod);
+
                   else await createProduct(prod);
                   setShowForm(false);
-                  loadProducts();
-                  loadMetrics();
+                  refetchProducts();
+                  refetchMetrics();
                 }}
                 onClose={() => setShowForm(false)}
               />

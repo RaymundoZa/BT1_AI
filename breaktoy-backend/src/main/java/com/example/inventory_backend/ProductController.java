@@ -24,17 +24,28 @@ import java.time.LocalDate;
 @CrossOrigin(origins = "http://localhost:8080")
 public class ProductController {
 
-    private List<Product> productList = new ArrayList<>();
+    private final ProductService productService;
+
+    public ProductController(ProductService productService) {
+        this.productService = productService;
+    }
 
     // POST /products - Create a product with validation
     @PostMapping
     public Product createProduct(@Valid @RequestBody Product product) {
-        long newId = productList.size() + 1;
+        long newId = productService.getProductList().size() + 1;
         product.setId(newId);
         product.setCreatedAt(java.time.LocalDate.now());
         product.setUpdatedAt(java.time.LocalDate.now());
-        productList.add(product);
+        productService.getProductList().add(product);
         return product;
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<Product> getProductById(@PathVariable Long id) {
+        return productService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // PUT /products/{id} - To find a product and edit it :D
@@ -44,7 +55,7 @@ public class ProductController {
             @Valid @RequestBody Product updatedProduct) {
 
         // Search for the product by ID
-        for (Product product : productList) {
+        for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
                 // Update the allowed fields
                 product.setName(updatedProduct.getName());
@@ -64,9 +75,9 @@ public class ProductController {
     // DELETE /products/{id} - To DELETE a product !!!!!!!!
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
-        for (Product product : productList) {
+        for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
-                productList.remove(product);
+                productService.getProductList().remove(product);
                 return ResponseEntity.noContent().build(); // 204 No Content
             }
         }
@@ -78,7 +89,7 @@ public class ProductController {
     public ResponseEntity<?> markProductInStock(
             @PathVariable Long id,
             @RequestParam(defaultValue = "10") Integer quantity) {
-        for (Product product : productList) {
+        for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
                 product.setQuantityInStock(quantity);
                 product.setUpdatedAt(java.time.LocalDate.now());
@@ -91,7 +102,7 @@ public class ProductController {
     // POST /products/{id}/outofstock - To mark that there is no stock of a product
     @PostMapping("/{id}/outofstock")
     public ResponseEntity<?> markProductOutOfStock(@PathVariable Long id) {
-        for (Product product : productList) {
+        for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
                 product.setQuantityInStock(0);
                 product.setUpdatedAt(java.time.LocalDate.now());
@@ -107,17 +118,17 @@ public class ProductController {
         Map<String, Object> metrics = new HashMap<>();
 
         // General metrics
-        int totalStock = productList.stream()
+        int totalStock = productService.getProductList().stream()
                 .filter(p -> p.getQuantityInStock() != null)
                 .mapToInt(Product::getQuantityInStock)
                 .sum();
 
-        double totalValue = productList.stream()
+        double totalValue = productService.getProductList().stream()
                 .filter(p -> p.getUnitPrice() != null && p.getQuantityInStock() != null)
                 .mapToDouble(p -> p.getUnitPrice() * p.getQuantityInStock())
                 .sum();
 
-        double avgPrice = productList.stream()
+        double avgPrice = productService.getProductList().stream()
                 .filter(p -> p.getQuantityInStock() != null && p.getQuantityInStock() > 0 && p.getUnitPrice() != null)
                 .mapToDouble(Product::getUnitPrice)
                 .average().orElse(0);
@@ -128,7 +139,7 @@ public class ProductController {
 
         // Metrics by category
         Map<String, Map<String, Object>> byCategory = new HashMap<>();
-        productList.stream()
+        productService.getProductList().stream()
                 .filter(p -> p.getCategory() != null)
                 .collect(Collectors.groupingBy(Product::getCategory))
                 .forEach((cat, products) -> {
@@ -171,7 +182,7 @@ public class ProductController {
             @RequestParam(required = false, defaultValue = "10") int size
     ) {
         // 1. Filtering
-        Stream<Product> stream = productList.stream();
+        Stream<Product> stream = productService.getProductList().stream();
 
         if (name != null && !name.isEmpty()) {
             stream = stream.filter(p -> p.getName() != null && p.getName().toLowerCase().contains(name.toLowerCase()));
