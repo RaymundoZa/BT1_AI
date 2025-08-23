@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProductsList from './components/ProductsList';
@@ -17,6 +17,7 @@ import {
   markInStock,
   markOutOfStock,
 } from './api/products';
+import useDebounce from './hooks/useDebounce';
 
 const pageSize = 10;
 
@@ -27,6 +28,8 @@ const App: React.FC = () => {
 
   const [name, setName] = useState<string>('');
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const debouncedName = useDebounce(name, 500);
+  const debouncedCategories = useDebounce(selectedCategories, 500);
   const [availability, setAvailability] = useState<'all' | 'inStock' | 'outOfStock'>('all');
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -36,28 +39,31 @@ const App: React.FC = () => {
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState<boolean>(false);
 
-  const buildFilters = () => ({
-    name: name || undefined,
-    category: selectedCategories.length ? selectedCategories : undefined,
-    inStock:
-      availability === 'inStock'
-        ? true
-        : availability === 'outOfStock'
-        ? false
-        : undefined,
-  });
+  const buildFilters = useCallback(
+    () => ({
+      name: debouncedName || undefined,
+      category: debouncedCategories.length ? debouncedCategories : undefined,
+      inStock:
+        availability === 'inStock'
+          ? true
+          : availability === 'outOfStock'
+          ? false
+          : undefined,
+    }),
+    [debouncedName, debouncedCategories, availability]
+  );
 
-  const loadProducts = async () => {
+  const loadProducts = useCallback(async () => {
     const filters = buildFilters();
     console.log('Enviando filtros:', filters);
     const res = await fetchProducts({ ...filters, page, size: pageSize });
     setProducts(res.data);
-  };
+  }, [buildFilters, page]);
 
-  const loadMetrics = async () => {
+  const loadMetrics = useCallback(async () => {
     const res = await fetchMetrics();
     setMetrics(res.data);
-  };
+  }, []);
 
   useEffect(() => {
     setCategories(Array.from(new Set(products.map(p => p.category))));
@@ -66,7 +72,7 @@ const App: React.FC = () => {
   useEffect(() => {
     loadProducts();
     loadMetrics();
-  }, [name, selectedCategories, availability, page]);
+  }, [loadProducts, loadMetrics]);
 
   return (
     <div id="top" className="min-h-screen flex flex-col bg-gray-900 text-gray-100">
@@ -81,14 +87,12 @@ const App: React.FC = () => {
           onCategoriesChange={setSelectedCategories}
           availability={availability}
           onAvailabilityChange={setAvailability}
-          onSearch={() => { setPage(0); loadProducts(); loadMetrics(); }}
+          onSearch={() => { setPage(0); }}
           onClear={() => {
             setName('');
             setSelectedCategories([]);
             setAvailability('all');
             setPage(0);
-            loadProducts();
-            loadMetrics();
           }}
         />
 
