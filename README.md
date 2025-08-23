@@ -1,8 +1,3 @@
-¡Claro! Aquí te lo dejo dentro de un bloque de editor de código para que solo lo copies y pegues en tu `README.md`:
-
----
-
-```markdown
 # Breaktoy Inventory Manager
 
 Sistema **full-stack** para la administración de inventario.  
