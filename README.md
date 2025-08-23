@@ -138,6 +138,3 @@ Ajusta la URL si deseas usar otra base de datos.
 ## 📄 Licencia
 
 Este proyecto se distribuye bajo los términos de la **MIT License** (o la licencia que corresponda).
-
-```
-
