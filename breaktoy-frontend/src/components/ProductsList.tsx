@@ -75,7 +75,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
                     </td>
                     <td className="px-4 py-2 text-center">
                       <button
-                        onClick={() => setModal({ id: p.id!, type: inStock ? 'out' : 'in' })}
+                        onClick={() => setModal({ id: p.id, type: inStock ? 'out' : 'in' })}
                         className={`inline-block px-2 py-1 text-xs font-medium text-white rounded-full ${statusBg} hover:opacity-80 transition`}
                       >
                         {statusText}
@@ -89,7 +89,7 @@ const ProductsList: React.FC<ProductsListProps> = ({
                         <FiEdit2 size={18} />
                       </button>
                       <button
-                        onClick={() => onDelete(p.id!)}
+                        onClick={() => onDelete(p.id)}
                         className="hover:text-red-400 transition"
                       >
                         <FiTrash2 size={18} />

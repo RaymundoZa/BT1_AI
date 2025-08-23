@@ -7,7 +7,7 @@ import ProductForm from './components/ProductForm';
 import SearchBar from './components/SearchBar';
 import MetricsTable from './components/MetricsTable';
 import MetricsGraphics from './components/MetricsGraphics';
-import type { Product, Metrics as MetricsType } from './api/products';
+import type { Product, Metrics as MetricsType, NewProduct } from './api/products';
 import {
   fetchProducts,
   fetchMetrics,
@@ -152,8 +152,8 @@ const App: React.FC = () => {
               <ProductForm
                 initial={editing ?? undefined}
                 categories={categories}
-                onSubmit={async prod => {
-                  if (prod.id) await updateProduct(prod.id, prod);
+                onSubmit={async (prod: Product | NewProduct) => {
+                  if ('id' in prod) await updateProduct(prod);
                   else await createProduct(prod);
                   setShowForm(false);
                   loadProducts();

@@ -1,11 +1,11 @@
 // src/components/ProductForm.tsx
 import React, { useState, useEffect } from 'react';
-import type { Product } from '../api/products';
+import type { Product, NewProduct } from '../api/products';
 
 export interface ProductFormProps {
   initial?: Product;
   categories: string[];
-  onSubmit: (product: Product) => void;
+  onSubmit: (product: Product | NewProduct) => void;
   onClose: () => void;
 }
 
