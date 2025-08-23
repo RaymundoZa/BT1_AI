@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 import java.util.Comparator;
 import java.util.stream.Collectors;
@@ -25,11 +26,12 @@ import java.time.LocalDate;
 public class ProductController {
 
     private List<Product> productList = new ArrayList<>();
+    private final AtomicLong idGenerator = new AtomicLong();
 
     // POST /products - Create a product with validation
     @PostMapping
     public Product createProduct(@Valid @RequestBody Product product) {
-        long newId = productList.size() + 1;
+        long newId = idGenerator.incrementAndGet();
         product.setId(newId);
         product.setCreatedAt(java.time.LocalDate.now());
         product.setUpdatedAt(java.time.LocalDate.now());
