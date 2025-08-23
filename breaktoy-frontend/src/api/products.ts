@@ -8,13 +8,16 @@ const API = axios.create({
     qs.stringify(params, { arrayFormat: 'repeat' }),
 });
 
-export interface Product {
-  id?: number;
+export interface NewProduct {
   name: string;
   category: string;
   unitPrice: number;
   quantityInStock: number;
   expirationDate?: string;
+}
+
+export interface Product extends NewProduct {
+  id: number;
 }
 
 export interface Metrics {
@@ -28,11 +31,11 @@ export interface Metrics {
 }
 
 // Listar con filtros, orden y paginación
-export const fetchProducts = (params: Record<string, any>) =>
+export const fetchProducts = (params: Record<string, unknown>) =>
   API.get<Product[]>('/products', { params });
 
 // CRUD básico
-export const createProduct = (p: Product) =>
+export const createProduct = (p: NewProduct) =>
   API.post<Product>('/products', p);
 export const updateProduct = (id: number, p: Product) =>
   API.put<Product>(`/products/${id}`, p);
