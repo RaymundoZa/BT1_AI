@@ -19,12 +19,18 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.time.LocalDate;
 
+
 @RestController
 @RequestMapping("/products")
 @CrossOrigin(origins = "http://localhost:8080")
 public class ProductController {
 
     private List<Product> productList = new ArrayList<>();
+    private final InventoryMetricsService inventoryMetricsService;
+
+    public ProductController(InventoryMetricsService inventoryMetricsService) {
+        this.inventoryMetricsService = inventoryMetricsService;
+    }
 
     // POST /products - Create a product with validation
     @PostMapping
@@ -104,56 +110,8 @@ public class ProductController {
     // GET /products/metrics - Gets overall and category-based inventory metrics
     @GetMapping("/metrics")
     public Map<String, Object> getInventoryMetrics() {
-        Map<String, Object> metrics = new HashMap<>();
-
-        // General metrics
-        int totalStock = productList.stream()
-                .filter(p -> p.getQuantityInStock() != null)
-                .mapToInt(Product::getQuantityInStock)
-                .sum();
-
-        double totalValue = productList.stream()
-                .filter(p -> p.getUnitPrice() != null && p.getQuantityInStock() != null)
-                .mapToDouble(p -> p.getUnitPrice() * p.getQuantityInStock())
-                .sum();
-
-        double avgPrice = productList.stream()
-                .filter(p -> p.getQuantityInStock() != null && p.getQuantityInStock() > 0 && p.getUnitPrice() != null)
-                .mapToDouble(Product::getUnitPrice)
-                .average().orElse(0);
-
-        metrics.put("totalStock", totalStock);
-        metrics.put("totalValue", totalValue);
-        metrics.put("avgPrice", avgPrice);
-
-        // Metrics by category
-        Map<String, Map<String, Object>> byCategory = new HashMap<>();
-        productList.stream()
-                .filter(p -> p.getCategory() != null)
-                .collect(Collectors.groupingBy(Product::getCategory))
-                .forEach((cat, products) -> {
-                    int catTotalStock = products.stream()
-                            .filter(p -> p.getQuantityInStock() != null)
-                            .mapToInt(Product::getQuantityInStock)
-                            .sum();
-                    double catTotalValue = products.stream()
-                            .filter(p -> p.getUnitPrice() != null && p.getQuantityInStock() != null)
-                            .mapToDouble(p -> p.getUnitPrice() * p.getQuantityInStock())
-                            .sum();
-                    double catAvgPrice = products.stream()
-                            .filter(p -> p.getQuantityInStock() != null && p.getQuantityInStock() > 0 && p.getUnitPrice() != null)
-                            .mapToDouble(Product::getUnitPrice)
-                            .average().orElse(0);
-
-                    Map<String, Object> catMetrics = new HashMap<>();
-                    catMetrics.put("totalStock", catTotalStock);
-                    catMetrics.put("totalValue", catTotalValue);
-                    catMetrics.put("avgPrice", catAvgPrice);
-
-                    byCategory.put(cat, catMetrics);
-                });
-        metrics.put("byCategory", byCategory);
-
+        Map<String, Object> metrics = inventoryMetricsService.computeGlobalMetrics(productList);
+        metrics.put("byCategory", inventoryMetricsService.computeByCategory(productList));
         return metrics;
     }
 
