@@ -4,20 +4,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.RequestMapping;
 
 import jakarta.validation.Valid;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import java.util.Comparator;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-import java.time.LocalDate;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/products")
@@ -30,9 +21,18 @@ public class ProductController {
         this.productService = productService;
     }
 
-    // POST /products - Create a product with validation
     @PostMapping
     public Product createProduct(@Valid @RequestBody Product product) {
+
+        return productService.createProduct(product);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateProduct(@PathVariable Long id, @Valid @RequestBody Product updatedProduct) {
+        return productService.updateProduct(id, updatedProduct)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+
         long newId = productService.getProductList().size() + 1;
         product.setId(newId);
         product.setCreatedAt(java.time.LocalDate.now());
@@ -70,11 +70,15 @@ public class ProductController {
 
         // If not found, return 404
         return ResponseEntity.notFound().build();
+
     }
 
-    // DELETE /products/{id} - To DELETE a product !!!!!!!!
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+
+        boolean deleted = productService.deleteProduct(id);
+        return deleted ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
+
         for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
                 productService.getProductList().remove(product);
@@ -82,10 +86,17 @@ public class ProductController {
             }
         }
         return ResponseEntity.notFound().build();
+
     }
 
-    // PUT /products/{id}/instock?quantity=X - We mark a product as IN STOCK
     @PutMapping("/{id}/instock")
+
+    public ResponseEntity<?> markProductInStock(@PathVariable Long id,
+                                                 @RequestParam(defaultValue = "10") Integer quantity) {
+        return productService.markProductInStock(id, quantity)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+
     public ResponseEntity<?> markProductInStock(
             @PathVariable Long id,
             @RequestParam(defaultValue = "10") Integer quantity) {
@@ -97,11 +108,16 @@ public class ProductController {
             }
         }
         return ResponseEntity.notFound().build();
+
     }
 
-    // POST /products/{id}/outofstock - To mark that there is no stock of a product
     @PostMapping("/{id}/outofstock")
     public ResponseEntity<?> markProductOutOfStock(@PathVariable Long id) {
+
+        return productService.markProductOutOfStock(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+
         for (Product product : productService.getProductList()) {
             if (product.getId().equals(id)) {
                 product.setQuantityInStock(0);
@@ -110,11 +126,14 @@ public class ProductController {
             }
         }
         return ResponseEntity.notFound().build();
+
     }
 
-    // GET /products/metrics - Gets overall and category-based inventory metrics
     @GetMapping("/metrics")
     public Map<String, Object> getInventoryMetrics() {
+
+        return productService.getInventoryMetrics();
+
         Map<String, Object> metrics = new HashMap<>();
 
         // General metrics
@@ -166,10 +185,22 @@ public class ProductController {
         metrics.put("byCategory", byCategory);
 
         return metrics;
+
     }
 
-    // GET /products - Gets filtered, sorted, and paginated products
     @GetMapping
+
+    public List<Product> getAllProducts(@RequestParam(required = false) String name,
+                                        @RequestParam(required = false) List<String> category,
+                                        @RequestParam(required = false) Boolean inStock,
+                                        @RequestParam(required = false) String sortBy,
+                                        @RequestParam(required = false) String sortBy2,
+                                        @RequestParam(required = false, defaultValue = "asc") String order,
+                                        @RequestParam(required = false, defaultValue = "asc") String order2,
+                                        @RequestParam(required = false, defaultValue = "0") int page,
+                                        @RequestParam(required = false, defaultValue = "10") int size) {
+        return productService.getAllProducts(name, category, inStock, sortBy, sortBy2, order, order2, page, size);
+
     public List<Product> getAllProducts(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) List<String> category,
@@ -213,9 +244,9 @@ public class ProductController {
         int toIndex = Math.min(fromIndex + size, filteredList.size());
         if (fromIndex > toIndex) return new ArrayList<>();
         return filteredList.subList(fromIndex, toIndex);
+
     }
 
-    // Handles validation errors and returns a JSON with error messages
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<Map<String, String>> handleValidationExceptions(MethodArgumentNotValidException ex) {
         Map<String, String> errors = new HashMap<>();
@@ -226,33 +257,5 @@ public class ProductController {
         });
         return ResponseEntity.badRequest().body(errors);
     }
-
-    // Utility: Returns the comparator based on the field and order
-    private Comparator<Product> getComparator(String field, String order) {
-        Comparator<Product> comparator;
-        switch (field) {
-            case "name":
-                comparator = Comparator.comparing(Product::getName, Comparator.nullsLast(String::compareToIgnoreCase));
-                break;
-            case "category":
-                comparator = Comparator.comparing(Product::getCategory, Comparator.nullsLast(String::compareToIgnoreCase));
-                break;
-            case "unitPrice":
-                comparator = Comparator.comparing(Product::getUnitPrice, Comparator.nullsLast(Double::compareTo));
-                break;
-            case "quantityInStock":
-                comparator = Comparator.comparing(Product::getQuantityInStock, Comparator.nullsLast(Integer::compareTo));
-                break;
-            case "expirationDate":
-                comparator = Comparator.comparing(Product::getExpirationDate, Comparator.nullsLast(LocalDate::compareTo));
-                break;
-            default:
-                comparator = Comparator.comparing(Product::getId);
-        }
-        if ("desc".equalsIgnoreCase(order)) {
-            comparator = comparator.reversed();
-        }
-        return comparator;
-    }
-
 }
+
