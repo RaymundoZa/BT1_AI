@@ -5,6 +5,8 @@ import { FiEdit2, FiTrash2 } from 'react-icons/fi';
 
 export interface ProductsListProps {
   products: Product[];
+  loading: boolean;
+  error: string | null;
   onEdit: (product: Product) => void;
   onDelete: (id: number) => void;
   /**
@@ -25,12 +27,22 @@ type ModalState =
 
 const ProductsList: React.FC<ProductsListProps> = ({
   products,
+  loading,
+  error,
   onEdit,
   onDelete,
   onToggleStock,
 }) => {
   const [modal, setModal] = useState<ModalState | null>(null);
   const [qtyInput, setQtyInput] = useState<string>('');
+
+  if (loading) {
+    return <div className="text-center">Loading products...</div>;
+  }
+
+  if (error) {
+    return <div className="text-center text-red-500">Error: {error}</div>;
+  }
 
   return (
     <>
