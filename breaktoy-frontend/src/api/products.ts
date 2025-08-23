@@ -3,7 +3,7 @@ import axios from 'axios';
 import qs from 'qs';
 
 const API = axios.create({
-  baseURL: 'http://localhost:9090',
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   paramsSerializer: params =>
     qs.stringify(params, { arrayFormat: 'repeat' }),
 });
@@ -28,7 +28,7 @@ export interface Metrics {
 }
 
 // Listar con filtros, orden y paginación
-export const fetchProducts = (params: Record<string, any>) =>
+export const fetchProducts = (params: Record<string, unknown>) =>
   API.get<Product[]>('/products', { params });
 
 // CRUD básico
