@@ -28,7 +28,7 @@ export interface Metrics {
 }
 
 // Listar con filtros, orden y paginación
-export const fetchProducts = (params: Record<string, any>) =>
+export const fetchProducts = (params: Record<string, unknown>) =>
   API.get<Product[]>('/products', { params });
 
 // CRUD básico
