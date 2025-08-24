@@ -1,53 +1,51 @@
 # Breaktoy Inventory Manager
 
-Sistema **full-stack** para la administración de inventario.  
+A **full-stack system** for inventory management.
 
-El **backend** está construido con **Spring Boot 3** y **JPA**, mientras que el **frontend** usa **React 19 + Vite** con **TypeScript** y **Tailwind CSS**.
-
----
-
-## ✨ Novedades
-
-- Persistencia real de productos mediante JPA/H2 (ya no se pierde el inventario al reiniciar).  
-- Servicio de métricas y servicio de productos para separar la lógica de negocio del controlador.  
-- Manejo de errores y estados de carga en las llamadas HTTP del frontend.  
-- Base URL del API configurable vía variables de entorno.  
-- Tipos de producto diferenciados (**Product** vs **NewProduct**) para mayor seguridad en TypeScript.  
-- Endpoint adicional `GET /products/{id}` para consultar un producto específico.  
+The **backend** is built with **Spring Boot 3** and **JPA**, while the **frontend** uses **React 19 + Vite** with **TypeScript** and **Tailwind CSS**.
 
 ---
 
-## 📁 Estructura
+## ✨ Features
+
+* Real persistence of products via JPA/H2 (inventory is no longer lost on restart).
+* Metrics service and product service to separate business logic from the controller.
+* Error handling and loading states in frontend HTTP calls.
+* API base URL configurable through environment variables.
+* Differentiated product types (**Product** vs **NewProduct**) for stronger type safety in TypeScript.
+* Additional endpoint `GET /products/{id}` to query a specific product.
+
+---
+
+## 📁 Project Structure
 
 ```
-
-breaktoy-backend/     # API REST en Spring Boot
-breaktoy-frontend/    # Interfaz web en React
-
-````
+breaktoy-backend/     # REST API in Spring Boot
+breaktoy-frontend/    # Web interface in React
+```
 
 ---
 
-## 🔧 Requisitos
+## 🔧 Requirements
 
-- **Java 21**  
-- **Node.js ≥ 18**  
-- **Maven Wrapper** y **npm** (incluidos en el repo)  
+* **Java 21**
+* **Node.js ≥ 18**
+* **Maven Wrapper** and **npm** (included in the repo)
 
 ---
 
-## 🚀 Puesta en marcha
+## 🚀 Getting Started
 
 ### Backend
 
 ```bash
 cd breaktoy-backend
-# base de datos en memoria H2
+# in-memory H2 database
 ./mvnw spring-boot:run
 
-# pruebas
+# run tests
 ./mvnw test
-````
+```
 
 ### Frontend
 
@@ -55,16 +53,16 @@ cd breaktoy-backend
 cd breaktoy-frontend
 npm install
 
-# arrancar en modo desarrollo
+# start in development mode
 npm run dev
 
-# ejecutar pruebas
+# run tests
 npm test
 ```
 
 ---
 
-## ⚙️ Variables de entorno
+## ⚙️ Environment Variables
 
 ### Frontend (`breaktoy-frontend/.env`)
 
@@ -72,7 +70,7 @@ npm test
 VITE_API_BASE_URL=http://localhost:9090
 ```
 
-Puedes definir perfiles adicionales:
+You can also define additional profiles:
 
 * `.env.development`
 * `.env.production`
@@ -84,57 +82,57 @@ spring.datasource.url=jdbc:h2:mem:inventory
 spring.jpa.hibernate.ddl-auto=update
 ```
 
-Ajusta la URL si deseas usar otra base de datos.
+Adjust the URL if you want to use a different database.
 
 ---
 
-## 📡 API principal
+## 📡 Main API
 
-| Método | Ruta                          | Descripción                              |
-| ------ | ----------------------------- | ---------------------------------------- |
-| GET    | `/products`                   | Lista productos con filtros y paginación |
-| GET    | `/products/{id}`              | Consulta un producto                     |
-| POST   | `/products`                   | Crea un producto                         |
-| PUT    | `/products/{id}`              | Actualiza un producto                    |
-| DELETE | `/products/{id}`              | Elimina un producto                      |
-| PATCH  | `/products/{id}/toggle-stock` | Alterna estado de stock                  |
-| GET    | `/products/metrics`           | Métricas globales y por categoría        |
-
----
-
-## 🧠 Lógica de negocio destacada
-
-* **ProductService**: CRUD, filtros, ordenación y paginación.
-* **InventoryMetricsService**: cálculo de métricas agregadas y por categoría.
-* **Validaciones**: Jakarta Validation controla nombre, categoría, precio, cantidad y fechas.
+| Method | Path                          | Description                                |
+| ------ | ----------------------------- | ------------------------------------------ |
+| GET    | `/products`                   | Lists products with filters and pagination |
+| GET    | `/products/{id}`              | Retrieves a specific product               |
+| POST   | `/products`                   | Creates a product                          |
+| PUT    | `/products/{id}`              | Updates a product                          |
+| DELETE | `/products/{id}`              | Deletes a product                          |
+| PATCH  | `/products/{id}/toggle-stock` | Toggles stock status                       |
+| GET    | `/products/metrics`           | Global and per-category metrics            |
 
 ---
 
-## 🖥️ Frontend destacado
+## 🧠 Business Logic Highlights
 
-* Hooks `useProducts` y `useMetrics` encapsulan la lógica de fetching.
-* Estado de carga (`isLoading`) y errores (`error`) en cada operación.
-* Componentes reutilizables: `SearchBar`, `ProductsList`, `ProductForm`, `MetricsTable`, `MetricsGraphics`.
-* Diseño conservado con **Tailwind**; no se realizaron cambios visuales.
+* **ProductService**: CRUD operations, filtering, sorting, and pagination.
+* **InventoryMetricsService**: aggregated and category-based metrics.
+* **Validation**: Jakarta Validation enforces rules for name, category, price, quantity, and dates.
+
+---
+
+## 🖥️ Frontend Highlights
+
+* Hooks `useProducts` and `useMetrics` encapsulate fetching logic.
+* Loading (`isLoading`) and error (`error`) states for each operation.
+* Reusable components: `SearchBar`, `ProductsList`, `ProductForm`, `MetricsTable`, `MetricsGraphics`.
+* Styling preserved with **Tailwind**; no visual redesign applied.
 
 ---
 
 ## 🧪 Testing
 
-* **Backend**: `ProductControllerTest` y pruebas de servicio.
-* **Frontend**: pruebas con `npm test` para componentes y hooks principales.
+* **Backend**: `ProductControllerTest` and service-level tests.
+* **Frontend**: `npm test` covers main components and hooks.
 
 ---
 
-## 🤝 Contribución
+## 🤝 Contributing
 
-1. Crea una rama a partir de `main`.
-2. Aplica los cambios.
-3. Ejecuta pruebas (`./mvnw test` y `npm test`).
-4. Abre un **Pull Request** describiendo el cambio.
+1. Create a branch from `main`.
+2. Apply your changes.
+3. Run tests (`./mvnw test` and `npm test`).
+4. Open a **Pull Request** describing the changes.
 
 ---
 
-## 📄 Licencia
+## 📄 License
 
-Este proyecto se distribuye bajo los términos de la **MIT License** (o la licencia que corresponda).
+This project is distributed under the terms of the **MIT License** (or the applicable license).
